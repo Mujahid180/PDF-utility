@@ -12,11 +12,37 @@ export default function HtmlToPdfPage() {
   const [html, setHtml] = useState("")
   const [isProcessing, setIsProcessing] = useState(false)
 
+  const [activeTab, setActiveTab] = useState("url")
+
   const handleConvert = async () => {
     setIsProcessing(true)
     try {
-      await new Promise(r => setTimeout(r, 2000))
-      alert("HTML to PDF conversion requires a headless browser (like Puppeteer) running on the server. This UI is ready to be connected to such a service.")
+      if (activeTab === 'url') {
+        await new Promise(r => setTimeout(r, 2000))
+        alert("URL to PDF conversion requires a server-side headless browser (like Puppeteer) to bypass CORS and render JavaScript. This UI is ready for backend integration.")
+      } else {
+        // HTML to PDF (raw code)
+        const html2canvas = (await import('html2canvas')).default;
+        const { jsPDF } = await import('jspdf');
+
+        const container = document.createElement('div');
+        container.style.position = 'fixed';
+        container.style.left = '-9999px';
+        container.innerHTML = html;
+        document.body.appendChild(container);
+
+        const canvas = await html2canvas(container);
+        const imgData = canvas.toDataURL('image/png');
+        const pdf = new jsPDF();
+        const imgProps = pdf.getImageProperties(imgData);
+        const pdfWidth = pdf.internal.pageSize.getWidth();
+        const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+
+        pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+        pdf.save('html-export.pdf');
+
+        document.body.removeChild(container);
+      }
     } catch (error) {
       console.error(error)
       alert("Failed to convert HTML to PDF.")
@@ -38,7 +64,7 @@ export default function HtmlToPdfPage() {
       </div>
 
       <Card className="max-w-2xl mx-auto p-6">
-        <Tabs defaultValue="url" className="w-full">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="grid w-full grid-cols-2 mb-6">
             <TabsTrigger value="url">URL to PDF</TabsTrigger>
             <TabsTrigger value="html">HTML to PDF</TabsTrigger>

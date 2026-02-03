@@ -77,9 +77,21 @@ export default function MergePdfPage() {
                         <h2 className="text-xl font-semibold">{files.length} Files Selected</h2>
                         <div className="flex gap-2">
                             <Button variant="outline" onClick={() => setFiles([])}>Clear All</Button>
-                            <Button onClick={() => document.getElementById('add-more')?.click()}>Add More</Button>
-                            {/* Invisible file input or logic to add more could go here, 
-                            or just show a mini dropzone at the end of the list */}
+                            <Button onClick={() => document.getElementById('add-more-input')?.click()}>Add More</Button>
+                            <input
+                                id="add-more-input"
+                                type="file"
+                                accept="application/pdf"
+                                multiple
+                                className="hidden"
+                                onChange={(e) => {
+                                    if (e.target.files) {
+                                        handleFileSelect(Array.from(e.target.files))
+                                    }
+                                    // Reset value so same file can be selected again if needed
+                                    e.target.value = ''
+                                }}
+                            />
                         </div>
                     </div>
 

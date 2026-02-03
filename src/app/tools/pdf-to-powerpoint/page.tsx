@@ -19,19 +19,47 @@ export default function PdfToPowerPointPage() {
 
     setIsProcessing(true)
     try {
-      await new Promise(r => setTimeout(r, 2000))
-      const content = `SLIDES FROM ${file.name}\n\n(Simplified PPT conversion)`
-      const blob = new Blob([content], { type: 'application/vnd.ms-powerpoint' })
-      const url = window.URL.createObjectURL(blob)
-      const a = document.createElement('a')
+      const pdfjsLib = await import('pdfjs-dist/build/pdf.min.mjs');
+      if (!pdfjsLib.GlobalWorkerOptions.workerSrc) {
+        pdfjsLib.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`;
+      }
+
+      const pptxgen = (await import('pptxgenjs')).default;
+      const pres = new pptxgen();
+
+      const arrayBuffer = await file.arrayBuffer();
+      const pdf = await pdfjsLib.getDocument(arrayBuffer).promise;
+
+      for (let i = 1; i <= pdf.numPages; i++) {
+        const page = await pdf.getPage(i);
+        const textContent = await page.getTextContent();
+        const text = textContent.items.map((item: any) => item.str).join(' ');
+
+        const slide = pres.addSlide();
+        slide.addText(text, {
+          x: 0.5,
+          y: 0.5,
+          w: '90%',
+          h: '90%',
+          fontSize: 12,
+          color: '363636',
+          align: pres.AlignH.left,
+          valign: pres.AlignV.top
+        });
+      }
+
+      const blob = await pres.write({ outputType: 'blob' }) as Blob;
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
       a.href = url
-      a.download = `${file.name.replace('.pdf', '')}.pps`
+      a.download = `${file.name.replace('.pdf', '')}.pptx`
       document.body.appendChild(a)
       a.click()
       a.remove()
+      window.URL.revokeObjectURL(url);
     } catch (error) {
       console.error(error)
-      alert("Failed to convert PDF to PowerPoint.")
+      alert("Failed to convert PDF to PowerPoint slideshow.")
     } finally {
       setIsProcessing(false)
     }

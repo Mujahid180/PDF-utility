@@ -4,11 +4,14 @@ import React, { useState } from 'react'
 import { Dropzone } from "@/components/file-upload/dropzone"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
-import { FileSearch, Download, File as FileIcon, Loader2, Files } from 'lucide-react'
+import { FileSearch, Download, File as FileIcon, Loader2, Files, ArrowLeft } from 'lucide-react'
+import { renderPdfToImages } from "@/lib/pdf-renderer"
 
 export default function ComparePdfPage() {
   const [files, setFiles] = useState<File[]>([])
   const [isProcessing, setIsProcessing] = useState(false)
+  const [previews, setPreviews] = useState<string[]>([])
+  const [showView, setShowView] = useState(false)
 
   const handleFileSelect = (newFiles: File[]) => {
     setFiles(prev => [...prev, ...newFiles].slice(0, 2))
@@ -19,14 +22,53 @@ export default function ComparePdfPage() {
 
     setIsProcessing(true)
     try {
-      await new Promise(r => setTimeout(r, 2000))
-      alert("Comparing PDFs requires a detailed visual diffing engine. This tool is designed to highlight changes between two versions of a document.")
+      const p1 = await renderPdfToImages(files[0], { scale: 1.0, limit: 1 }, () => { })
+      const p2 = await renderPdfToImages(files[1], { scale: 1.0, limit: 1 }, () => { })
+
+      setPreviews([URL.createObjectURL(p1[0]), URL.createObjectURL(p2[0])])
+      setShowView(true)
     } catch (error) {
       console.error(error)
       alert("Failed to compare PDFs.")
     } finally {
       setIsProcessing(false)
     }
+  }
+
+  if (showView) {
+    return (
+      <div className="container mx-auto py-8 px-4 max-w-7xl">
+        <div className="flex justify-between items-center mb-8">
+          <Button variant="ghost" onClick={() => setShowView(false)}>
+            <ArrowLeft className="mr-2 h-4 w-4" /> Back to Upload
+          </Button>
+          <h1 className="text-xl font-bold flex items-center gap-2">
+            <Files className="h-5 w-5 text-primary" /> Visual Comparison
+          </h1>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          <div className="space-y-4">
+            <p className="font-semibold text-center text-muted-foreground uppercase text-xs tracking-wider">Document 1: {files[0].name}</p>
+            <div className="bg-zinc-100 dark:bg-zinc-900 p-4 rounded-xl border-2 border-primary/10 shadow-inner">
+              <img src={previews[0]} alt="Doc 1" className="w-full h-auto shadow-2xl bg-white" />
+            </div>
+          </div>
+          <div className="space-y-4">
+            <p className="font-semibold text-center text-muted-foreground uppercase text-xs tracking-wider">Document 2: {files[1].name}</p>
+            <div className="bg-zinc-100 dark:bg-zinc-900 p-4 rounded-xl border-2 border-primary/10 shadow-inner">
+              <img src={previews[1]} alt="Doc 2" className="w-full h-auto shadow-2xl bg-white" />
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-12 p-6 bg-blue-50 dark:bg-blue-900/10 rounded-xl text-center border border-blue-100 dark:border-blue-900/30">
+          <p className="text-blue-900 dark:text-blue-200">
+            Visual highlighting of differences is coming soon. Currently providing side-by-side inspection.
+          </p>
+        </div>
+      </div>
+    )
   }
 
   return (

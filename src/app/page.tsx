@@ -50,12 +50,6 @@ export default function Home() {
           100% free and easy to use.
         </p>
 
-        <div className="w-full max-w-4xl mx-auto mb-16">
-          <Dropzone
-            onFileSelect={(files) => alert(`Files selected: ${files.length}. Please choose a tool below.`)}
-            className="w-full shadow-xl bg-white dark:bg-zinc-900"
-          />
-        </div>
       </div>
 
       <div className="max-w-7xl mx-auto px-6 pb-24">

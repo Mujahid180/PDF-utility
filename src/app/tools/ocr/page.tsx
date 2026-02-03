@@ -16,18 +16,63 @@ export default function OcrPdfPage() {
     if (files.length > 0) setFile(files[0])
   }
 
+  const [ocrProgress, setOcrProgress] = useState(0)
+
   const handleOcr = async () => {
     if (!file) return
 
     setIsProcessing(true)
+    setOcrProgress(0)
     try {
-      await new Promise(r => setTimeout(r, 3000))
-      alert("OCR processing requires a specialized engine (like Tesseract or Cloud Vision). This UI is ready to be connected to such a service.")
+      const pdfjsLib = await import('pdfjs-dist/build/pdf.min.mjs');
+      if (!pdfjsLib.GlobalWorkerOptions.workerSrc) {
+        pdfjsLib.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`;
+      }
+
+      const { createWorker } = await import('tesseract.js');
+      const worker = await createWorker(language, 1, {
+        logger: m => {
+          if (m.status === 'recognizing text') setOcrProgress(Math.round(m.progress * 100))
+        }
+      });
+
+      const arrayBuffer = await file.arrayBuffer();
+      const pdf = await pdfjsLib.getDocument(arrayBuffer).promise;
+      let fullText = "";
+
+      // Limit to first 3 pages to avoid hanging browser
+      const pagesToProcess = Math.min(pdf.numPages, 3);
+
+      for (let i = 1; i <= pagesToProcess; i++) {
+        const page = await pdf.getPage(i);
+        const viewport = page.getViewport({ scale: 2.0 });
+        const canvas = document.createElement('canvas');
+        const context = canvas.getContext('2d');
+        canvas.height = viewport.height;
+        canvas.width = viewport.width;
+
+        await (page as any).render({ canvasContext: context!, viewport } as any).promise;
+        const { data: { text } } = await worker.recognize(canvas);
+        fullText += `--- Page ${i} ---\n${text}\n\n`;
+      }
+
+      await worker.terminate();
+
+      const blob = new Blob([fullText], { type: 'text/plain' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url
+      a.download = `${file.name.replace('.pdf', '')}_ocr.txt`
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+      window.URL.revokeObjectURL(url);
     } catch (error) {
       console.error(error)
-      alert("Failed to process OCR.")
+      alert("Failed to process OCR. Make sure it's a valid PDF.")
     } finally {
       setIsProcessing(false)
+      setOcrProgress(0)
     }
   }
 
@@ -86,7 +131,7 @@ export default function OcrPdfPage() {
             {isProcessing ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Recognizing Text...
+                {ocrProgress > 0 ? `Recognizing... ${ocrProgress}%` : 'Starting OCR...'}
               </>
             ) : (
               <>
@@ -94,6 +139,21 @@ export default function OcrPdfPage() {
               </>
             )}
           </Button>
+
+          {isProcessing && ocrProgress > 0 && (
+            <div className="w-full max-w-sm space-y-2">
+              <div className="flex justify-between text-xs">
+                <span>Progress</span>
+                <span>{ocrProgress}%</span>
+              </div>
+              <div className="h-2 w-full bg-secondary rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-primary transition-all duration-300"
+                  style={{ width: `${ocrProgress}%` }}
+                />
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>

@@ -47,23 +47,27 @@ export default function CropPage() {
 
     setIsProcessing(true)
     try {
-      const formData = new FormData()
-      formData.append('file', file)
+      const { PDFDocument } = await import('pdf-lib')
+      const arrayBuffer = await file.arrayBuffer()
+      const pdfDoc = await PDFDocument.load(arrayBuffer)
+      const pages = pdfDoc.getPages()
 
-      // Convert 0-100 to 0-1
-      formData.append('x', (croppedAreaPercentages.x / 100).toString())
-      formData.append('y', (croppedAreaPercentages.y / 100).toString())
-      formData.append('width', (croppedAreaPercentages.width / 100).toString())
-      formData.append('height', (croppedAreaPercentages.height / 100).toString())
+      pages.forEach(page => {
+        const { width, height } = page.getSize()
 
-      const response = await fetch('/api/pdf-crop', {
-        method: 'POST',
-        body: formData
+        // react-easy-crop uses percentages (0-100)
+        // x, y are from top-left.
+        // PDF coords are from bottom-left.
+        const cropX = (croppedAreaPercentages.x * width) / 100
+        const cropY = height - ((croppedAreaPercentages.y + croppedAreaPercentages.height) * height) / 100
+        const cropWidth = (croppedAreaPercentages.width * width) / 100
+        const cropHeight = (croppedAreaPercentages.height * height) / 100
+
+        page.setCropBox(cropX, cropY, cropWidth, cropHeight)
       })
 
-      if (!response.ok) throw new Error("Failed to crop")
-
-      const blob = await response.blob()
+      const pdfBytes = await pdfDoc.save()
+      const blob = new Blob([pdfBytes as any], { type: 'application/pdf' })
       const url = window.URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
@@ -71,7 +75,7 @@ export default function CropPage() {
       document.body.appendChild(a)
       a.click()
       a.remove()
-
+      window.URL.revokeObjectURL(url)
     } catch (error) {
       console.error(error)
       alert("Failed to crop PDF.")

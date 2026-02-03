@@ -19,25 +19,51 @@ export default function PdfToWordPage() {
 
     setIsProcessing(true)
     try {
-      // Simulated conversion for MVP
-      // Real conversion would involve sending to a server or using a complex lib
-      await new Promise(r => setTimeout(r, 2000))
+      const pdfjsLib = await import('pdfjs-dist/build/pdf.min.mjs');
+      if (!pdfjsLib.GlobalWorkerOptions.workerSrc) {
+        pdfjsLib.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`;
+      }
 
-      // Just for demonstration, we "extract" some data and give a doc file
-      // Producing a real DOCX without a lib is complex, so we'll give a message
-      // or a basic .doc (which is just HTML/Text)
-      const content = `EXTRACTED CONTENT FROM ${file.name}\n\n(This is a simplified Word conversion for demonstration purposes.)`
-      const blob = new Blob([content], { type: 'application/msword' })
-      const url = window.URL.createObjectURL(blob)
-      const a = document.createElement('a')
+      const { Document, Packer, Paragraph, TextRun } = await import('docx');
+
+      const arrayBuffer = await file.arrayBuffer();
+      const pdf = await pdfjsLib.getDocument(arrayBuffer).promise;
+      const pages: any[] = [];
+
+      for (let i = 1; i <= pdf.numPages; i++) {
+        const page = await pdf.getPage(i);
+        const textContent = await page.getTextContent();
+        const text = textContent.items.map((item: any) => item.str).join(' ');
+
+        pages.push(new Paragraph({
+          children: [
+            new TextRun({
+              text: text,
+              font: "Calibri",
+            }),
+          ],
+        }));
+      }
+
+      const doc = new Document({
+        sections: [{
+          properties: {},
+          children: pages,
+        }],
+      });
+
+      const blob = await Packer.toBlob(doc);
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
       a.href = url
-      a.download = `${file.name.replace('.pdf', '')}.doc`
+      a.download = `${file.name.replace('.pdf', '')}.docx`
       document.body.appendChild(a)
       a.click()
       a.remove()
+      window.URL.revokeObjectURL(url);
     } catch (error) {
       console.error(error)
-      alert("Failed to convert PDF to Word.")
+      alert("Failed to convert PDF to Word document.")
     } finally {
       setIsProcessing(false)
     }

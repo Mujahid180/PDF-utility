@@ -43,7 +43,13 @@ export default function ExcelToPdfPage() {
 
       {!file ? (
         <div className="max-w-xl mx-auto">
-          <Dropzone onFileSelect={handleFileSelect} />
+          <Dropzone
+            onFileSelect={handleFileSelect}
+            accept={{
+              'application/vnd.ms-excel': ['.xls'],
+              'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx']
+            }}
+          />
         </div>
       ) : (
         <div className="flex flex-col items-center space-y-8">

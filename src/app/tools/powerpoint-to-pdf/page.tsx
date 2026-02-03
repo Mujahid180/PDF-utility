@@ -43,7 +43,13 @@ export default function PowerPointToPdfPage() {
 
       {!file ? (
         <div className="max-w-xl mx-auto">
-          <Dropzone onFileSelect={handleFileSelect} />
+          <Dropzone
+            onFileSelect={handleFileSelect}
+            accept={{
+              'application/vnd.ms-powerpoint': ['.ppt'],
+              'application/vnd.openxmlformats-officedocument.presentationml.presentation': ['.pptx']
+            }}
+          />
         </div>
       ) : (
         <div className="flex flex-col items-center space-y-8">

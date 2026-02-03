@@ -33,7 +33,10 @@ export default function CompressPage() {
       // Step 1: Render pages to images (Rasterize)
       // This removes hidden vector data/layers, often reducing size for complex docs
       // It heavily depends on the target quality/scale.
-      const blobs = await renderPdfToImages(file, { scale: scale[0] }, (current, total) => {
+      const blobs = await renderPdfToImages(file, {
+        scale: scale[0],
+        quality: quality[0]
+      }, (current, total) => {
         setProgress(Math.round((current / total) * 50)) // First 50%
         setStatus(`Rasterizing page ${current} of ${total}...`)
       })
@@ -139,6 +142,15 @@ export default function CompressPage() {
               Text will no longer be selectable, but it effectively shrinks scanned documents and complex vector files.
             </p>
           </div>
+
+          {(quality[0] > 0.8 && scale[0] > 1.5) && (
+            <div className="bg-amber-50 dark:bg-amber-900/20 p-4 rounded-lg flex gap-3 text-sm text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800">
+              <Info className="h-5 w-5 shrink-0" />
+              <p>
+                <strong>Note:</strong> High quality and scale settings might result in a <strong>larger</strong> file size than the original, especially if your PDF contains mostly text (vectors). Try 1.0x or 1.5x scale for better results.
+              </p>
+            </div>
+          )}
 
           <Button onClick={handleCompress} disabled={isProcessing} className="w-full" size="lg">
             {isProcessing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}

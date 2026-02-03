@@ -1,5 +1,6 @@
 interface RenderOptions {
     scale?: number // 1 = 72dpi, 2 = 144dpi, etc.
+    quality?: number // 0 to 1
     limit?: number // Max pages to render
 }
 
@@ -67,7 +68,7 @@ export const renderPdfToImages = async (
 
             // Convert to blob
             const blob = await new Promise<Blob | null>((resolve) =>
-                canvas.toBlob(resolve, 'image/jpeg', 0.92) // Higher quality 0.92
+                canvas.toBlob(resolve, 'image/jpeg', options.quality || 0.92)
             );
 
             if (blob) blobs.push(blob);

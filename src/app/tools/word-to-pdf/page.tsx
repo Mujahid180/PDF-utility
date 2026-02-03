@@ -43,7 +43,13 @@ export default function WordToPdfPage() {
 
       {!file ? (
         <div className="max-w-xl mx-auto">
-          <Dropzone onFileSelect={handleFileSelect} />
+          <Dropzone
+            onFileSelect={handleFileSelect}
+            accept={{
+              'application/msword': ['.doc'],
+              'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx']
+            }}
+          />
         </div>
       ) : (
         <div className="flex flex-col items-center space-y-8">
